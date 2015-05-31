@@ -4,17 +4,20 @@
     <title>Simple Map</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
+    <link href='http://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
     <style>
       html, body, #map-canvas {
         height: 100%;
         margin: 0px;
         padding: 0px;
+        font-family: 'Roboto', sans-serif;
       }
       canvas {
         position: absolute;
         top: 0;
       }
       #infos {
+        overflow: hidden;
         position: absolute;
         width: 0;
         top: 0;
@@ -22,14 +25,25 @@
         left: 0;
         z-index: 2;
         background: white;
+       
+      }
+      #infos .header {
+        background-color: #009688;
+         padding: 16px;
+         color: white;
+      }
+      #infos .title{
+            margin: 0;
       }
     </style>
   </head>
   <body id="content">
 
     <div id="infos">
-        <h1 class="title"></h1>
-        <p class="description"></p>
+        <div class='header'>
+            <h1 class="title">Title</h1>
+            <p class="address">Rue de la concorde, Paris</p>
+        </div>
     </div>
 
     <div id="map-canvas"></div>
@@ -49,11 +63,12 @@
         var mapObj;
         var geocoder;
         var service;
+        var marker;
         function initializeMaps() {
             geocoder = new google.maps.Geocoder();
             var mapOptions = {
                 zoom: 16,
-                center: new google.maps.LatLng(59.95, 30.32),
+                center: new google.maps.LatLng(59.934699, 30.320785),
                 disableDefaultUI: true
             };
             mapObj = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
@@ -72,17 +87,14 @@
         };
 
         map.addMarker = function(myLatlng) {
-            //var myLatlng = new google.maps.LatLng(mapPos.lat(), mapPos.lng());
-            var marker = new google.maps.Marker({
+            if (marker)
+                marker.setMap(null);
+            marker = new google.maps.Marker({
                 animation: google.maps.Animation.DROP,
                 position: myLatlng,
                 map: mapObj
             });
         };
-
-        //setTimeout(function() {
-          //  map.move(0, 0.2);
-        //}, 2000);
 
         var navigator = new IntelRealSense.Navigator();
         var content = document.getElementById('content');
@@ -107,7 +119,6 @@
             map.addMarker(point);
             geocoder.geocode({'latLng': point}, function(results, status) {
                 if (status == google.maps.GeocoderStatus.OK) {
-                    console.log(results);
                   if (results[0]) {
                     var request = {
                         placeId: results[0].place_id
@@ -116,13 +127,12 @@
                         if (status == google.maps.places.PlacesServiceStatus.OK) {
                             console.log(place);
                             TweenLite.to('#infos', 0.2, {width: 500});
-                            $('.title').text(place.name)
+                            TweenLite.from('#infos .title', 0.3, {opacity: 0, y: 5, delay: 0.3});
+                            TweenLite.from('#infos .address', 0.3, {opacity: 0, y: 5, delay: 0.5});
+                            $('.title').text(place.name);
+                            $('.address').text(place.formatted_address);
                         }
                     });
-
-
-
-
                   } else {
                     alert('No results found');
                   }
