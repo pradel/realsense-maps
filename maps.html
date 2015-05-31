@@ -14,31 +14,50 @@
         position: absolute;
         top: 0;
       }
+      #infos {
+        position: absolute;
+        width: 0;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 2;
+        background: white;
+      }
     </style>
   </head>
   <body id="content">
 
+    <div id="infos">
+        <h1 class="title"></h1>
+        <p class="description"></p>
+    </div>
+
     <div id="map-canvas"></div>
 
 
-    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=places"></script>
     <script src="lib/jquery-1.11.0.min.js"></script>
     <script src="lib/promise-1.0.0.min.js"></script>
     <script src="lib/realsense.js"></script>
     <script src="lib/realsenseinfo.js"></script>
     <script src="lib/realsense-navigator.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/1.17.0/TweenMax.min.js"></script>
     <script>
 
     $(document).ready(function() {
 
         var mapObj;
+        var geocoder;
+        var service;
         function initializeMaps() {
+            geocoder = new google.maps.Geocoder();
             var mapOptions = {
-            zoom: 8,
-            center: new google.maps.LatLng(-34.397, 150.644),
-            disableDefaultUI: true
+                zoom: 16,
+                center: new google.maps.LatLng(59.95, 30.32),
+                disableDefaultUI: true
             };
             mapObj = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+            service = new google.maps.places.PlacesService(mapObj);
         }
 
         initializeMaps();
@@ -52,8 +71,8 @@
             mapObj.panTo(newPos);
         };
 
-        map.addMarker = function() {
-            var myLatlng = new google.maps.LatLng(mapPos.lat(), mapPos.lng());
+        map.addMarker = function(myLatlng) {
+            //var myLatlng = new google.maps.LatLng(mapPos.lat(), mapPos.lng());
             var marker = new google.maps.Marker({
                 animation: google.maps.Animation.DROP,
                 position: myLatlng,
@@ -61,21 +80,61 @@
             });
         };
 
-        setTimeout(function() {
-            map.move(0, 0.2);
-        }, 2000);
-
-        setTimeout(function() {
-            map.addMarker();  
-        }, 4000);
+        //setTimeout(function() {
+          //  map.move(0, 0.2);
+        //}, 2000);
 
         var navigator = new IntelRealSense.Navigator();
         var content = document.getElementById('content');
-        navigator.addNavigationElement('realsense-tap', content, function() { console.log('tap') });
-        navigator.addSpeechElement(['hello', 'monkey'], function(word) {alert(word);});
-        //navigator.addNavigationElement('realsense-speech-begin', content, function() { alert('you said something'); });
 
-        navigator.addNavigationElement('realsense-pinch', content, function(event) { console.log(event.detail) });
+        var pixelToLatlng = function(xcoor, ycoor) {
+            var ne = mapObj.getBounds().getNorthEast();
+            var sw = mapObj.getBounds().getSouthWest();
+            var projection = mapObj.getProjection();
+            var topRight = projection.fromLatLngToPoint(ne);
+            var bottomLeft = projection.fromLatLngToPoint(sw);
+            //var scale = Math.pow(2, mapObj.getZoom());
+            var scale = 1 << mapObj.getZoom();
+
+            var newLatlng = projection.fromPointToLatLng(new google.maps.Point(xcoor / scale + bottomLeft.x, ycoor / scale + topRight.y));
+            return newLatlng;
+        };
+
+        navigator.addNavigationElement('realsense-tap', content, function(e) {
+            // add a point to map
+            var point = e.detail;
+            point = pixelToLatlng(point.x, point.y);
+            map.addMarker(point);
+            geocoder.geocode({'latLng': point}, function(results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    console.log(results);
+                  if (results[0]) {
+                    var request = {
+                        placeId: results[0].place_id
+                    };
+                    service.getDetails(request, function(place, status) {
+                        if (status == google.maps.places.PlacesServiceStatus.OK) {
+                            console.log(place);
+                            TweenLite.to('#infos', 0.2, {width: 500});
+                            $('.title').text(place.name)
+                        }
+                    });
+
+
+
+
+                  } else {
+                    alert('No results found');
+                  }
+                } else {
+                  alert('Geocoder failed due to: ' + status);
+                }
+            });
+        });
+
+        navigator.addNavigationElement('realsense-pinch', content, function(event) {
+            console.log(event.detail);
+        });
         navigator.init();
         navigator.startNavigation();
 
