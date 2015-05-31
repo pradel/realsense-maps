@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple Map</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      html, body, #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px;
+        position: absolute;
+      }
+    </style>
+  </head>
+  <body id="content">
+
+    <div id="map-canvas"></div>
+
+
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+    <script src="lib/jquery-1.11.0.min.js"></script>
+    <script src="lib/promise-1.0.0.min.js"></script>
+    <script src="lib/realsense.js"></script>
+    <script src="lib/realsenseinfo.js"></script>
+    <script src="lib/realsense-navigator.js"></script>
+    <script>
+
+    $(document).ready(function() {
+
+        var mapObj;
+        function initializeMaps() {
+            var mapOptions = {
+            zoom: 8,
+            center: new google.maps.LatLng(-34.397, 150.644),
+            disableDefaultUI: true
+            };
+            mapObj = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+        }
+
+        initializeMaps();
+
+
+        var map = {};
+
+        map.move = function(x, y) {
+            mapPos = mapObj.getCenter();
+            var newPos = new google.maps.LatLng(mapPos.lat() + x, mapPos.lng() + y);
+            mapObj.panTo(newPos);
+        };
+
+        map.addMarker = function() {
+            var myLatlng = new google.maps.LatLng(mapPos.lat(), mapPos.lng());
+            var marker = new google.maps.Marker({
+                animation: google.maps.Animation.DROP,
+                position: myLatlng,
+                map: mapObj
+            });
+        };
+
+        setTimeout(function() {
+            map.move(0, 0.2);
+        }, 2000);
+
+        setTimeout(function() {
+            map.addMarker();  
+        }, 4000);
+
+        var navigator = new IntelRealSense.Navigator();
+        var content = document.getElementById('content');
+        navigator.addNavigationElement('realsense-tap', content, function() { console.log('tap') });
+        navigator.addSpeechElement(['hello', 'monkey'], function(word) {alert(word);});
+        //navigator.addNavigationElement('realsense-speech-begin', content, function() { alert('you said something'); });
+
+        navigator.addNavigationElement('realsense-pinch', content, function(event) { console.log(event.detail) });
+        navigator.init();
+        navigator.startNavigation();
+
+    });
+    </script>
+  </body>
+</html>
